@@ -38,11 +38,8 @@ pub fn interactive() {
         .expect("Failure to read input for user contribution");
     let yearly_input: f32 = yearly_input.trim().parse().expect("User contribution must be a dollar amount");
 
-    // Assume the average annual return is 5.6% with a mix of stocks, bonds, and cash.
-    const AVG_ANNUAL_RETURN: f32 = 0.056;
-
-    // TODO: Call compute()
-    compute(initial_age, initial_savings, yearly_input, ideal_savings, AVG_ANNUAL_RETURN);
+    // Compute
+    compute(initial_age, initial_savings, yearly_input, ideal_savings);
 }
 
 /// Compute your future retirement age
@@ -53,7 +50,10 @@ pub fn interactive() {
 /// * `ideal_savings` - How much money the user wishes to retire with
 /// * `avg_annual_return` - Average annual return TODO: Where did we get this number?
 pub fn compute(initial_age: u32, initial_savings: f32, annual_input: f32,
-               ideal_savings: f32, avg_annual_return: f32) -> u32 {
+               ideal_savings: f32) -> u32 {
+
+    // Assume the average annual return is 5.6% with a mix of stocks, bonds, and cash.
+    const AVG_ANNUAL_RETURN: f32 = 0.056;
 
     // Determine how much money we save each year
     // amount earned each year = current savings * (1.0 + AVG_ANNUAL_RETURN)
@@ -61,7 +61,7 @@ pub fn compute(initial_age: u32, initial_savings: f32, annual_input: f32,
     let mut retirement_age: u32 = initial_age;
     while savings_amt < ideal_savings {
         // NOTE: The return does not include the user's input for the CURRENT year
-        savings_amt = annual_input + savings_amt * (1.0 + avg_annual_return);
+        savings_amt = annual_input + savings_amt * (1.0 + AVG_ANNUAL_RETURN);
         retirement_age += 1;
         debug!("${} at age {}", savings_amt, retirement_age);
     }
@@ -72,9 +72,19 @@ pub fn compute(initial_age: u32, initial_savings: f32, annual_input: f32,
     return retirement_age;
 }
 
-// TODO: Unit tests
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     // TODO:
-// }
+/// Unit tests
+#[cfg(test)]
+mod tests {
+    // Note this useful idion: importing names from outer (for mod tests) scope
+    use super::*;  // THIS IS NECESSARY
+
+    #[test]
+    fn test1() {
+        let age: u32 = 30;
+        let initial_savings: f32 = 0.0;  // You have nothing to being with
+        let yearly_input: f32 = 1000000.0;  // $1M (super saver!)
+        let retirement_goal: f32 = 2000000.0;  // $2M
+        let retirement_age = compute(age, initial_savings, yearly_input, retirement_goal);
+        assert_eq!(retirement_age, 32);
+    }
+}
