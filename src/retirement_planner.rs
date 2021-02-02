@@ -102,7 +102,7 @@ pub fn plot(initial_age: u32, savings_history: Vec<f32>) -> Result<(), Box<dyn s
     // Area chart
     chart.draw_series(
         AreaSeries::new(
-            age_range.iter().zip(savings_history.iter()).map(|(x, y)| (*x as u32, *y as f32)),
+            age_range.iter().zip(savings_history.iter()).map(|(x, y)| (*x, *y)),
             0.0,
             &BLUE.mix(0.2),
         ).border_style(&BLUE),
@@ -110,7 +110,7 @@ pub fn plot(initial_age: u32, savings_history: Vec<f32>) -> Result<(), Box<dyn s
 
     // Markers
     chart.draw_series(
-        age_range.iter().zip(savings_history.iter()).map(|(x, y)| Circle::new((*x as u32, *y as f32), 5, BLUE.filled())),
+        age_range.iter().zip(savings_history.iter()).map(|(x, y)| Circle::new((*x, *y), 5, BLUE.filled())),
     )?;
 
     // Draw labels and mesh
