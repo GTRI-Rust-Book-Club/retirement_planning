@@ -3,7 +3,6 @@ use std::io;
 use log::{info, debug};
 
 pub fn interactive() {
-
     info!("Problem 4: Retirement Hopes");
 
     // Prompt for current age
@@ -39,7 +38,7 @@ pub fn interactive() {
     let yearly_input: f32 = yearly_input.trim().parse().expect("User contribution must be a dollar amount");
 
     // Compute
-    compute(initial_age, initial_savings, yearly_input, ideal_savings);
+    compute(initial_age, initial_savings, yearly_input, ideal_savings, true);
 }
 
 /// Compute your future retirement age
@@ -50,8 +49,7 @@ pub fn interactive() {
 /// * `ideal_savings` - How much money the user wishes to retire with
 /// * `avg_annual_return` - Average annual return TODO: Where did we get this number?
 pub fn compute(initial_age: u32, initial_savings: f32, annual_input: f32,
-               ideal_savings: f32) -> u32 {
-
+               ideal_savings: f32, plot_data: bool) -> u32 {
     // Assume the average annual return is 5.6% with a mix of stocks, bonds, and cash.
     const AVG_ANNUAL_RETURN: f32 = 0.056;
 
@@ -59,17 +57,73 @@ pub fn compute(initial_age: u32, initial_savings: f32, annual_input: f32,
     // amount earned each year = current savings * (1.0 + AVG_ANNUAL_RETURN)
     let mut savings_amt: f32 = initial_savings;
     let mut retirement_age: u32 = initial_age;
+    let mut record: Vec<f32> = vec![savings_amt];
     while savings_amt < ideal_savings {
         // NOTE: The return does not include the user's input for the CURRENT year
         savings_amt = annual_input + savings_amt * (1.0 + AVG_ANNUAL_RETURN);
         retirement_age += 1;
-        debug!("${} at age {}", savings_amt, retirement_age);
+        debug!("${:.2} at age {}", savings_amt, retirement_age);
+        record.push(savings_amt);
+    }
+
+    if plot_data {  // Plot
+        let _res = plot(initial_age, record);
     }
 
     // Print summary if user input and results
     info!("You are a {}-year-old with starting savings of ${} and saving ${} each year", initial_age, initial_savings, annual_input);
     info!("If you wish you save ${} by retirement, then you will retire at age {}", ideal_savings, retirement_age);
     return retirement_age;
+}
+
+use plotters::prelude::*;
+
+/// Plot savings towards retirement
+///
+/// * `initial_age` - Initial age of user
+/// * `savings_history` - Projected savings history for user
+pub fn plot(initial_age: u32, savings_history: Vec<f32>) -> Result<(), Box<dyn std::error::Error>> {
+    let filename: &str = "retirement_savings.png";
+    let root = BitMapBackend::new(filename, (800, 600)).into_drawing_area();
+
+    root.fill(&WHITE)?;
+
+    let age_range: Vec<u32> = (initial_age..initial_age + savings_history.len() as u32).collect();
+
+    // Define chart builder axes
+    let mut chart = ChartBuilder::on(&root)
+        .caption("Saving for Retirement", ("sans-serif", 20).into_font())
+        .x_label_area_size(40)
+        .y_label_area_size(80)
+        .margin(10)
+        .build_cartesian_2d(age_range[0]..*age_range.last().unwrap(),
+                            savings_history[0]..*savings_history.last().unwrap())?;
+
+    // Area chart
+    chart.draw_series(
+        AreaSeries::new(
+            age_range.iter().zip(savings_history.iter()).map(|(x, y)| (*x as u32, *y as f32)),
+            0.0,
+            &BLUE.mix(0.2),
+        ).border_style(&BLUE),
+    )?;
+
+    // Markers
+    chart.draw_series(
+        age_range.iter().zip(savings_history.iter()).map(|(x, y)| Circle::new((*x as u32, *y as f32), 5, BLUE.filled())),
+    )?;
+
+    // Draw labels and mesh
+    chart
+        .configure_mesh()
+        .disable_x_mesh()
+        .y_desc("Savings (US Dollars)")
+        .x_desc("Age")
+        .axis_desc_style(("sans-serif", 18))
+        .draw()?;
+
+    info!("Plotted savings history to {}", filename);
+    Ok(())
 }
 
 /// Unit tests
