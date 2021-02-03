@@ -1,5 +1,6 @@
 // Includes
 use std::io;
+use std::env;
 use log::{info, debug};
 
 use pyo3::prelude::*;
@@ -157,8 +158,17 @@ pub fn python_plot(initial_age: u32, savings_history: &Vec<f32>) -> PyResult<()>
     debug!("Attempting to run the python_plot code");
     Python::with_gil(|py| {
         let sys = PyModule::import(py, "sys")?;
+        let mut exe_dir_path = env::current_exe()?;
+        exe_dir_path.pop();
+        let exe_dir = match exe_dir_path.to_str() {
+            Some(_exe_string) => _exe_string.to_string(),
+            None => {
+                debug!("Failed to convert to string");
+                "".to_string()
+            }
+        };
         unsafe{
-            match PyList::unchecked_downcast(sys.get("path")?).insert(0, "../../retirement_planning/src") {
+            match PyList::unchecked_downcast(sys.get("path")?).insert(0, exe_dir) {
                 Ok(_result) => debug!("Successfully updated Python path"),
                 Err(e) => debug!("Error updating python path {}", e),
             };
