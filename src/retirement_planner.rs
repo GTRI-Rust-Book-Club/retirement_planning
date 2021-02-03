@@ -2,6 +2,11 @@
 use std::io;
 use log::{info, debug};
 
+use pyo3::prelude::*;
+//use pyo3::types::IntoPyDict; // Used by demo code from PyO3
+use pyo3::types::PyList;
+use pyo3::PyNativeType;
+
 pub fn interactive() {
     info!("Problem 4: Retirement Hopes");
 
@@ -67,7 +72,12 @@ pub fn compute(initial_age: u32, initial_savings: f32, annual_input: f32,
     }
 
     if plot_data {  // Plot
-        let _res = plot(initial_age, record);
+        // Use borrow passing so that the record can be sent to two functions
+        let _res = plot(initial_age, &record);
+        match python_plot(initial_age, &record) {
+            Ok(_result) => debug!("Successful execution of python_plot"),
+            Err(e) => debug!("There was an error {}", e),
+        }
     }
 
     // Print summary if user input and results
@@ -82,7 +92,7 @@ use plotters::prelude::*;
 ///
 /// * `initial_age` - Initial age of user
 /// * `savings_history` - Projected savings history for user
-pub fn plot(initial_age: u32, savings_history: Vec<f32>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn plot(initial_age: u32, savings_history: &Vec<f32>) -> Result<(), Box<dyn std::error::Error>> {
     let filename: &str = "retirement_savings.png";
     let root = BitMapBackend::new(filename, (800, 600)).into_drawing_area();
 
@@ -126,6 +136,46 @@ pub fn plot(initial_age: u32, savings_history: Vec<f32>) -> Result<(), Box<dyn s
     Ok(())
 }
 
+/*
+// This is an example case from the PyO3 documentation
+pub fn python_test() -> PyResult<()> {
+   let gil = Python::acquire_gil();
+   let py = gil.python();
+   let sys = py.import("sys")?;
+   let version: String = sys.get("version")?.extract()?;
+
+   let locals = [("os", py.import("os")?)].into_py_dict(py);
+   let code = "os.getenv('USER') or os.getenv('USERNAME') or 'Unknown'";
+   let user: String = py.eval(code, None, Some(&locals))?.extract()?;
+
+    println!("Hello {}, I'm Python {}", user, version);
+    Ok(())
+}
+ */
+
+pub fn python_plot(initial_age: u32, savings_history: &Vec<f32>) -> PyResult<()> {
+    debug!("Attempting to run the python_plot code");
+    Python::with_gil(|py| {
+        let sys = PyModule::import(py, "sys")?;
+        unsafe{
+            match PyList::unchecked_downcast(sys.get("path")?).insert(0, "../../retirement_planning/src") {
+                Ok(_result) => debug!("Successfully updated Python path"),
+                Err(e) => debug!("Error updating python path {}", e),
+            };
+        }
+        let path: Vec<String> = sys.get("path")?.extract()?;
+        println!("The current path is");
+        for folder in path {
+            println!("{}", folder);
+        }
+        let retire_plot = PyModule::import(py, "retire_plot")?;
+        retire_plot.call1("test", ())?;
+        let plot_data = savings_history.clone();   // Since reference is borrowed, make a copy
+        retire_plot.call1("plot", (initial_age, plot_data))?;
+        Ok(())
+    })
+}
+
 /// Unit tests
 #[cfg(test)]
 mod tests {
@@ -138,7 +188,7 @@ mod tests {
         let initial_savings: f32 = 0.0;  // You have nothing to being with
         let yearly_input: f32 = 1000000.0;  // $1M (super saver!)
         let retirement_goal: f32 = 2000000.0;  // $2M
-        let retirement_age = compute(age, initial_savings, yearly_input, retirement_goal);
+        let retirement_age = compute(age, initial_savings, yearly_input, retirement_goal, false);
         assert_eq!(retirement_age, 32);
     }
 }

@@ -10,3 +10,8 @@ edition = "2018"
 log = "0.4.13"
 simple_logger = "1.11.0"
 plotters = "0.3.0"
+
+[dependencies.pyo3]
+version = "0.13.1"
+features = ["auto-initialize"]
+
