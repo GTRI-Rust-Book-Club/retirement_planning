@@ -6,6 +6,7 @@ def test():
 def plot(initial_age, savings_history):
     print("Calling the python plotting function ...")
     age = range(initial_age, initial_age + len(savings_history))
+    assert len(age) == len(savings_history), "Problem with data lengths. len(age) = {} len(savings_history) == {}".format(len(age), len(savings_history))
     plt.plot(age, savings_history)
     plt.show()
 
